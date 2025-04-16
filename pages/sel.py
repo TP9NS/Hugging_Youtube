@@ -52,7 +52,7 @@ if video_id:
                     "summary_strength": summary_strength,
                     "comment_count": comment_count
                 }
-                st.switch_page("pages/sub_test.py")
+                st.switch_page("pages/sub.py")
 
 else:
     st.error("❗ video_id가 없습니다.")
