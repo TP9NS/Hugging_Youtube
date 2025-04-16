@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 import openai
-
+import re
 # Load environment variables
 load_dotenv()
 
@@ -56,9 +56,24 @@ def analyze_with_gpt(comments: list) -> str:
 
     return response.choices[0].message.content
 
+#gpt 응답 parsing
+def parse_gpt_response(response_text: str) -> dict:
+    sentiment_lines = re.findall(r'- (\S+): (\d+%)', response_text)
+    sentiment_dict = {label: percent for label, percent in sentiment_lines}
+
+    summary_match = re.search(r'요약:\s*(.+)', response_text, re.DOTALL)
+    summary = summary_match.group(1).strip() if summary_match else ""
+
+    return {
+        "sentiment_summary": sentiment_dict,
+        "summary": summary
+    }
+
+#호출 함수
 def process_youtube_comments(api_key: str, url: str, num_comments: int = 30) -> str:
     video_id = get_video_id(url)
     comments = fetch_youtube_comments(api_key, video_id, num_comments)
     if not comments:
         return "댓글을 불러오지 못했습니다."
-    return analyze_with_gpt(comments)
+    gpt_dict = analyze_with_gpt(comments)
+    return parse_gpt_response(gpt_dict)

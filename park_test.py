@@ -2,19 +2,15 @@ import os
 from utils.CommentsAnalysis import process_youtube_url
 from utils.CommentsGenAI import process_youtube_comments
 from dotenv import load_dotenv
-from utils.test2 import fetch_youtube_transcript
 load_dotenv() # env 파일 초기화
  
 video_url = "https://www.youtube.com/watch?v=MHyaDHWkA2Y"
 API_KEY = os.getenv("GOOGLE_API_KEY")
 #result = process_youtube_url(video_url, API_KEY)
 #process_youtube(api key ,url, 댓글 수 defalut = 30 )
-#result2 = process_youtube_comments(API_KEY,video_url)
+result2 = process_youtube_comments(API_KEY,video_url)
 
-result3= fetch_youtube_transcript()
-#함수이름(url , )
 #print(result)
+print(result2)
 
-#print(result2)
-
-print(result3)
+#print(result3)
