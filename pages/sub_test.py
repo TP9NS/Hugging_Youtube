@@ -3,6 +3,7 @@ from googleapiclient.discovery import build
 from dotenv import load_dotenv
 import os
 from datetime import datetime
+from utils.KeywordVisualizer import visualize_keywords_from_text
 
 # from utils.CommentsGenAI import process_youtube_comments  # OpenAI 사용 모듈
 # from utils.CommentsGenAI import *  # OpenAI 사용 모듈
@@ -56,6 +57,8 @@ try:
     transcript = fetch_youtube_transcript(video_url)
     summary = summarize_transcript(transcript, summary_strength=summary_strength)
     st.info(summary)
+
+    visualize_keywords_from_text(transcript, chart_type="pie")
 
     # 🔹 댓글 분석 (OpenAI 사용)
     # st.subheader("💬 댓글 분석")
