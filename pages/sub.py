@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 import os
 from datetime import datetime
 
-from utils.CommentsAnalysis import process_youtube_comments
+
+from utils.CommentsGenAI import process_youtube_comments
 from utils.CommentsGenAI import *
 from utils.TranscriptSummarize import fetch_youtube_transcript, summarize_transcript
 
@@ -59,7 +60,7 @@ try:
 
     # 🔸 댓글 분석
     st.subheader("💬 댓글 분석")
-    comment_result = process_youtube_comments(API_KEY, video_url, max_comments=comment_count)
+    comment_result = process_youtube_comments(API_KEY, video_url, comment_count)
 
     sentiment = comment_result.get("sentiment_summary", {})
     comment_summary = comment_result.get("summary", "")

@@ -11,9 +11,11 @@ API_KEY = os.getenv("GOOGLE_API_KEY")
 
 #process_youtube_comments(api key ,url, 댓글 수 defalut = 30 )
 result2 = process_youtube_comments(API_KEY,video_url) # dict 형식으로 반환 -> 'sentiment_summary': {'긍정': '40%', '부정': '50%', '모르겠음': '10%'}, 'summary': '어쩌구저쩌구'
+
 #summarize_transscript(str(script) , [짧게, 중간 , 길게])
 result3 = summarize_transcript(fetch_youtube_transcript(video_url), summary_strength="길게") # str 형식으로 요약 정보 반환 
 #print(result)
+
 print(result2)
 
 #print(result3)
