@@ -28,55 +28,58 @@ def get_popular_videos(max_results=6):
         })
     return videos
 
-# 키워드 기반 영상 검색
-def get_search_videos(keyword, max_results=6):
-    # 검색 API로 영상 ID 목록 가져오기
-    search_request = youtube.search().list(
-        part='snippet',
-        q=keyword,
-        type='video',
-        regionCode='KR',
-        maxResults=max_results
-    )
-    search_response = search_request.execute()
-    
-    video_ids = [item['id']['videoId'] for item in search_response['items']]
-    
-    # 상세 정보 (조회수 포함) 가져오기
-    details_request = youtube.videos().list(
-        part='snippet,statistics,contentDetails',
-        id=','.join(video_ids)
-    )
-    details_response = details_request.execute()
-
+def get_search_videos(keyword, max_results=10):
     videos = []
-    for item in details_response['items']:
-        # 영상 길이를 확인
-        video_duration = item['contentDetails']['duration']
+    video_ids_seen = set()  # 중복 방지용
+    next_page_token = None
 
-        # 영상 길이를 분과 초로 분해
-        duration_seconds = 0
-        match = re.match(r"PT(?:(\d+)M)?(?:(\d+)S)?", video_duration)
-        if match:
-            minutes = match.group(1)
-            seconds = match.group(2)
+    while len(videos) < max_results:
+        search_request = youtube.search().list(
+            part='snippet',
+            q=keyword,
+            type='video',
+            regionCode='KR',
+            maxResults=25,
+            pageToken=next_page_token
+        )
+        search_response = search_request.execute()
+        video_ids = [item['id']['videoId'] for item in search_response['items']]
+        next_page_token = search_response.get("nextPageToken")
 
-            if minutes:
-                duration_seconds += int(minutes) * 60  # 분을 초로 변환
-            if seconds:
-                duration_seconds += int(seconds)  # 초 추가
+        details_request = youtube.videos().list(
+            part='snippet,statistics,contentDetails',
+            id=','.join(video_ids)
+        )
+        details_response = details_request.execute()
 
-        # 1분 이하(60초 이하) 영상을 제외
-        if duration_seconds <= 60:
-            continue
+        for item in details_response['items']:
+            vid = item['id']
+            if vid in video_ids_seen:
+                continue  # 중복 제외
 
-        videos.append({
-            'title': item['snippet']['title'],
-            'video_id': item['id'],
-            'thumbnail': item['snippet']['thumbnails']['medium']['url'],
-            'views': int(item['statistics'].get('viewCount', 0))
-        })
-    
+            video_duration = item['contentDetails']['duration']
+
+            # duration을 초로 변환
+            match = re.match(r"PT(?:(\d+)M)?(?:(\d+)S)?", video_duration)
+            minutes = int(match.group(1)) if match and match.group(1) else 0
+            seconds = int(match.group(2)) if match and match.group(2) else 0
+            duration_seconds = minutes * 60 + seconds
+
+            if duration_seconds > 60:
+                videos.append({
+                    'title': item['snippet']['title'],
+                    'video_id': vid,
+                    'thumbnail': item['snippet']['thumbnails']['medium']['url'],
+                    'views': int(item['statistics'].get('viewCount', 0))
+                })
+                video_ids_seen.add(vid)
+
+            if len(videos) >= max_results:
+                break
+
+        if not next_page_token:
+            break
+
     return videos
 
 # 메인 앱
@@ -110,7 +113,7 @@ def main():
         st.subheader("🔥 인기 TOP 10 영상 추천")
         videos = get_popular_videos(10)
 
-    # 3개씩 출력
+    # 영상 리스트 출력
     for i in range(0, len(videos), 5):
         cols = st.columns(5)
         for j in range(5):
@@ -118,10 +121,9 @@ def main():
                 video = videos[i + j]
                 with cols[j]:
                     st.image(video['thumbnail'], use_column_width=True)
-                    st.markdown(
-                        f"<h5 style='margin-bottom:5px;'><a href='/sub?video_id={video['video_id']}' target='_self'>{video['title']}</a></h5>",
-                        unsafe_allow_html=True
-                    )
+                    if st.button(video["title"], key=video["video_id"]):
+                        st.session_state.selected_video_id = video["video_id"]  # 💡 video_id 저장
+                        st.switch_page("pages/sel.py")
 
 if __name__ == "__main__":
     main()
