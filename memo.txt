@@ -1,0 +1,2 @@
+MODEL_NAME = "monologg/koelectra-small-finetuned-nsmc" // 나쁘지 않음 -> 'ㅋㅋㅋㅋㅋㅋ' '개패고 싶다' 이런거 검출 잘 못하는 듯
+MODEL_NAME = "snunlp/KR-FinBert-SC" // 음.. 별로인듯 모델 크기만 큼
