@@ -46,7 +46,7 @@ try:
 
     # 제목, 썸네일, 통계
     st.markdown(f"## 🎥 {title}")
-    st.image(thumbnail, use_column_width=True)
+    st.image(thumbnail, use_container_width=True)
     st.markdown(f"👁️ 조회수: {views:,}회")
     st.markdown(f"👍 좋아요: {likes:,}개")
     st.markdown(f"📅 게시일: {published_date}")

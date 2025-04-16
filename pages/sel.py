@@ -29,7 +29,7 @@ if video_id:
         left, right = st.columns([1, 2])
 
         with left:
-            st.image(thumbnail, use_column_width=True)
+            st.image(thumbnail, use_container_width=True)
 
         with right:
             st.markdown(f"## 🎥 {title}")

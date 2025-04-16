@@ -120,7 +120,7 @@ def main():
             if i + j < len(videos):
                 video = videos[i + j]
                 with cols[j]:
-                    st.image(video['thumbnail'], use_column_width=True)
+                    st.image(video['thumbnail'], use_container_width=True)
                     if st.button(video["title"], key=video["video_id"]):
                         st.session_state.selected_video_id = video["video_id"]  # 💡 video_id 저장
                         st.switch_page("pages/sel.py")
