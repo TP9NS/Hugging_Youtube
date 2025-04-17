@@ -1,11 +1,9 @@
 import streamlit as st
 from googleapiclient.discovery import build
-from pages.login import show_login_button
 from dotenv import load_dotenv
 import os
 import re
-import requests
-from utils.Database_CRUD import save_search, save_watch_history
+#추가
 from utils.Scraping import get_naver_news_by_keyword, get_naver_news_by_category
 
 load_dotenv()  # .env 파일 로드
@@ -13,37 +11,6 @@ load_dotenv()  # .env 파일 로드
 # YouTube API 설정
 API_KEY = os.getenv("YOUTUBE_API_KEY")
 youtube = build('youtube', 'v3', developerKey=API_KEY)
-
-# 🔐 카카오 인증 코드로 access_token 요청
-def get_kakao_token(code):
-    token_url = "https://kauth.kakao.com/oauth/token"
-    data = {
-        "grant_type": "authorization_code",
-        "client_id": os.getenv("KAKAO_REST_API_KEY"),
-        "redirect_uri": "http://localhost:8501",
-        "code": code
-    }
-    response = requests.post(token_url, data=data)
-    if response.status_code == 200:
-        return response.json().get("access_token")
-    else:
-        st.error("❌ access_token 요청 실패")
-        st.write(response.text)
-        return None
-
-# 🔐 access_token으로 사용자 정보 요청
-def get_kakao_user_info(access_token):
-    user_info_url = "https://kapi.kakao.com/v2/user/me"
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
-    response = requests.get(user_info_url, headers=headers)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        st.error("❌ 사용자 정보 요청 실패")
-        st.write(response.text)
-        return None
 
 # 인기 영상 가져오기
 def get_popular_videos(max_results=6):
@@ -65,7 +32,7 @@ def get_popular_videos(max_results=6):
 
 def get_search_videos(keyword, max_results=10):
     videos = []
-    video_ids_seen = set()
+    video_ids_seen = set()  # 중복 방지용
     next_page_token = None
 
     while len(videos) < max_results:
@@ -90,9 +57,11 @@ def get_search_videos(keyword, max_results=10):
         for item in details_response['items']:
             vid = item['id']
             if vid in video_ids_seen:
-                continue
+                continue  # 중복 제외
 
             video_duration = item['contentDetails']['duration']
+
+            # duration을 초로 변환
             match = re.match(r"PT(?:(\d+)M)?(?:(\d+)S)?", video_duration)
             minutes = int(match.group(1)) if match and match.group(1) else 0
             seconds = int(match.group(2)) if match and match.group(2) else 0
@@ -123,39 +92,9 @@ def main():
         layout="wide"
     )
 
-    if "code" not in st.session_state:
-        query_params = st.query_params
-       
-        code = query_params.get("code")
-
-        if not code or code == "_":
-            show_login_button()
-            return
-        st.session_state.code = code
-    else:
-        code = st.session_state.code
-
-
-    if "access_token" not in st.session_state:
-        access_token = get_kakao_token(code)
-        if not access_token:
-            return
-        st.session_state.access_token = access_token
-    else:
-        access_token = st.session_state.access_token
-
-    if "user_info" not in st.session_state:
-        user_info = get_kakao_user_info(access_token)
-        if not user_info:
-            return
-        st.session_state.user_info = user_info
-        st.session_state.user_id = user_info.get("id")
-    else:
-        user_info = st.session_state.user_info
-
-
     st.markdown("<h1 style='text-align: center;'>🎬 YouTube 영상 분석 플랫폼</h1>", unsafe_allow_html=True)
 
+    #이 두 줄 추가!
     categories = ["인기급상승", "정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]
     selected_category = st.radio("카테고리 선택", categories, horizontal=True)
     
@@ -176,7 +115,6 @@ def main():
     if keyword:
         st.subheader(f"🔎 '{keyword}' 관련 영상 추천")
         videos = get_search_videos(keyword, 10)
-        save_search(st.session_state.user_id, keyword)
     else:
         st.subheader("🔥 인기 TOP 10 영상 추천")
         videos = get_popular_videos(10)
@@ -190,9 +128,8 @@ def main():
                 with cols[j]:
                     st.image(video['thumbnail'], use_container_width=True)
                     if st.button(video["title"], key=video["video_id"]):
-                        st.session_state.selected_video_id = video["video_id"]
-                        save_watch_history(st.session_state.user_id, video["video_id"])
-                        st.switch_page("pages/sel.py")
+                        st.session_state.selected_video_id = video["video_id"]  # 💡 video_id 저장
+                        st.switch_page("pages/sel_test.py")
 
     # 뉴스 출력: 키워드 기반 or 카테고리 기반
     st.markdown("---")
