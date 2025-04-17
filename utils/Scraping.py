@@ -38,11 +38,19 @@ def get_naver_news_by_category(section_name):
         soup = BeautifulSoup(res.text, 'html.parser')
         a_tag_list = soup.select("div.sa_text a[href*='mnews/article']")
 
-        for a_tag in a_tag_list[:10]:
-            title = a_tag.get_text(strip=True)
-            link = a_tag['href']
-            if link.startswith('//'):
-                link = 'https:' + link
-            news_list.append({"title": title, "url": link})
+    for a_tag in a_tag_list:
+        title = a_tag.get_text(strip=True)
+        link = a_tag.get("href")
+
+        if not title or not title.strip() or not link:
+            continue
+
+        if link.startswith("//"):
+            link = "https:" + link
+
+        news_list.append({"title": title, "url": link})
+
+        if len(news_list) >= 10:
+            break
 
     return news_list

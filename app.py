@@ -237,8 +237,27 @@ def main():
     else:
         news_list = []
 
-    for news in news_list:
-        st.markdown(f"<p><a href='{news['url']}' target='_blank'>{news['title']}</a></p>", unsafe_allow_html=True)
+    if not news_list:
+        st.info("📭 뉴스가 없습니다.")
+    else:
+        for news in news_list:
+            st.markdown(
+                f"""
+                <div style="
+                    border: 1px solid #e0e0e0;
+                    border-radius: 10px;
+                    padding: 12px 16px;
+                    margin-bottom: 10px;
+                    background-color: #f9f9f9;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                ">
+                    <a href="{news['url']}" target="_blank" style="text-decoration: none; color: #222;">
+                        <h4 style="margin: 0; font-size: 17px;">{news['title']}</h4>
+                    </a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 if __name__ == "__main__":
     main()
