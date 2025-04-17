@@ -182,8 +182,31 @@ def main():
         row3_col1, row3_col2, row3_col3 = st.columns([6, 0.5, 1.5])
 
         with row3_col1:
-            categories = ["인기급상승", "정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]
-            selected_category = st.radio("📂 카테고리 선택", categories, horizontal=True)
+            categories = ["🔥인기급상승", "🗣️정치", "💰경제", "🤝사회", "😎생활/문화", "🌎세계", "👓IT/과학"]
+
+            st.markdown("#### 📂 카테고리 선택")
+            cols = st.columns(len(categories))
+            selected_category = None
+            pure_category = None
+
+            for i, cat in enumerate(categories):
+                if cols[i].button(cat, use_container_width=True):
+                    selected_category = cat
+
+            # 선택된 버튼이 있을 경우에만 처리
+            if selected_category:
+                category_mapping = {
+                    "🔥인기급상승": "인기급상승",
+                    "🗣️정치": "정치",
+                    "💰경제": "경제",
+                    "🤝사회": "사회",
+                    "😎생활/문화": "생활/문화",
+                    "🌎세계": "세계",
+                    "👓IT/과학": "IT/과학"
+                }
+                pure_category = category_mapping[selected_category]
+                st.write(f"✅ 선택된 카테고리: {pure_category}")
+
 
         with row3_col3:
             with st.expander("🎯 퀄리티 필터", expanded=False):
@@ -211,9 +234,9 @@ def main():
         st.subheader(f"🔎 '{keyword}' 관련 영상 추천")
         videos = get_search_videos(keyword, 10, order=order_value, start_date=start_date)
         save_search(st.session_state.user_id, keyword)
-    elif selected_category in ["정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]:
-        st.subheader(f"🔎 '{selected_category}' 관련 영상 추천")
-        videos = get_search_videos(selected_category, 10, order=order_value, start_date=start_date)
+    elif pure_category in ["정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]:
+        st.subheader(f"🔎 '{pure_category}' 관련 영상 추천")
+        videos = get_search_videos(pure_category, 10, order=order_value, start_date=start_date)
 
     else:
         row_top_col1, row_top_col2 = st.columns([6, 1])
@@ -242,9 +265,9 @@ def main():
     if keyword:
         st.subheader(f"📰 '{keyword}' 관련 네이버 뉴스")
         news_list = get_naver_news_by_keyword(keyword)
-    elif selected_category in ["정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]:
-        st.subheader(f"📰 네이버 {selected_category} 뉴스")
-        news_list = get_naver_news_by_category(selected_category)
+    elif pure_category in ["정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]:
+        st.subheader(f"📰 네이버 {pure_category} 뉴스")
+        news_list = get_naver_news_by_category(pure_category)
     else:
         news_list = []
 
