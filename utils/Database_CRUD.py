@@ -29,3 +29,22 @@ def get_history(user_id, category):
     if data:
         return [item for item in data.values()]
     return []
+
+#기록 삭제
+def delete_history_item(user_id: str, category: str, item_key: str):
+    """
+    Firebase에서 특정 히스토리 항목 삭제
+    :param user_id: 사용자 ID
+    :param category: 'search_history' or 'watch_history'
+    :param item_key: Firebase push된 고유 키
+    """
+    ref = db.reference(f"users/{user_id}/{category}/{item_key}")
+    ref.delete()
+
+def get_history(user_id, category):
+    ref = db.reference(f"users/{user_id}/{category}")
+    data = ref.get()
+    if data:
+        # key 값을 포함해서 반환해야 삭제 가능!
+        return [{"key": k, **v} for k, v in data.items()]
+    return []
