@@ -9,6 +9,8 @@ from utils.CommentsGenAI import process_youtube_comments
 from utils.CommentsGenAI import *
 from utils.TranscriptSummarize import fetch_youtube_transcript, summarize_transcript
 
+import plotly.express as px
+
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")  # OpenAI / Gemini용
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")  # YouTube Data API용
@@ -52,27 +54,49 @@ try:
     st.markdown(f"📅 게시일: {published_date}")
     st.markdown(f"🔗 [YouTube에서 보기]({video_url})", unsafe_allow_html=True)
 
-    # 🔹 요약
+    # 1행 - 영상 요약
     st.subheader("📝 영상 요약")
     transcript = fetch_youtube_transcript(video_url)
     summary = summarize_transcript(transcript, summary_strength=summary_strength)
     st.info(summary)
-    visualize_keywords_from_text(transcript, chart_type="pie")
 
-    # 🔸 댓글 분석
-    st.subheader("💬 댓글 분석")
+    # 2행 - 키워드 분석
+    st.subheader("🔑 키워드 분석")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        visualize_keywords_from_text(transcript, chart_type="pie")
+
+    # 3행 - 댓글 요약
+    st.subheader("🗣️ 댓글 요약")
+
     comment_result = process_youtube_comments(API_KEY, video_url, comment_count)
 
     sentiment = comment_result.get("sentiment_summary", {})
     comment_summary = comment_result.get("summary", "")
+    st.info(comment_summary)
 
-    # 감정 요약 출력
-    st.markdown("**😊 감정 요약:**")
+    st.subheader("😊 감정 분석")
+
+    # 📋 감정 요약 텍스트
+    st.markdown("**📋 감정 요약 텍스트**")
     st.write(sentiment)
 
-    # 댓글 요약 출력
-    st.markdown("**🗣️ 요약 내용:**")
-    st.info(comment_summary)
+    col3, col4 = st.columns(2)
+    with col3:
+
+        # 📊 감정 비율 파이 차트
+        st.markdown("**📊 감정 비율 파이 차트**")
+        labels = list(sentiment.keys())
+        values = [int(v.replace('%', '')) for v in sentiment.values()]
+        fig = px.pie(
+            names=labels,
+            values=values,
+            title="감정 비율",
+            color_discrete_sequence=px.colors.sequential.RdBu
+        )
+        #fig.update_layout(height=300)  # 파이 차트 크기 조절
+        st.plotly_chart(fig, use_container_width=True)
 
 except Exception as e:
     st.error(f"❗ 오류 발생: {e}")
