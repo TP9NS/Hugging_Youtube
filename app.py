@@ -244,6 +244,8 @@ def main():
             st.markdown(
                 f"""
                 <div style="
+                    display: flex;
+                    align-items: center;
                     border: 1px solid #e0e0e0;
                     border-radius: 10px;
                     padding: 12px 16px;
@@ -251,13 +253,16 @@ def main():
                     background-color: #f9f9f9;
                     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
                 ">
-                    <a href="{news['url']}" target="_blank" style="text-decoration: none; color: #222;">
-                        <h4 style="margin: 0; font-size: 17px;">{news['title']}</h4>
-                    </a>
+                    {'<img src="' + news['thumbnail'] + '" style="width: 100px; height: auto; margin-right: 16px; border-radius: 8px;">' if news.get('thumbnail') else ''}
+                    <div>
+                        <a href="{news['url']}" target="_blank" style="text-decoration: none; color: #222;">
+                            <h4 style="margin: 0; font-size: 17px;">{news['title']}</h4>
+                        </a>
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-
+        
 if __name__ == "__main__":
     main()
