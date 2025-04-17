@@ -211,9 +211,20 @@ def main():
         st.subheader(f"🔎 '{keyword}' 관련 영상 추천")
         videos = get_search_videos(keyword, 10, order=order_value, start_date=start_date)
         save_search(st.session_state.user_id, keyword)
+    elif selected_category in ["정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]:
+        st.subheader(f"🔎 '{selected_category}' 관련 영상 추천")
+        videos = get_search_videos(selected_category, 10, order=order_value, start_date=start_date)
+
     else:
-        st.subheader("🔥 인기 TOP 10 영상 추천")
-        videos = get_popular_videos(10)
+        row_top_col1, row_top_col2 = st.columns([6, 1])
+        with row_top_col1:
+            st.subheader("🔥 인기 TOP 10 영상 추천")
+        with row_top_col2:
+            if st.button("📊 분석", key="analysis_button", use_container_width=True):
+                st.switch_page("pages/analysis.py")
+
+        videos = get_popular_videos(10)  # 이 라인은 반드시 else 안에 있어야 함
+
 
     for i in range(0, len(videos), 5):
         cols = st.columns(5)

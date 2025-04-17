@@ -1,87 +1,68 @@
-import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-
-# Selenium WebDriver 설정
-def get_naver_news_by_keyword(keyword):
+import time
+import requests
+def test_naver_html(keyword):
     url = f"https://search.naver.com/search.naver?where=news&query={keyword}"
     headers = {
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
+
     res = requests.get(url, headers=headers)
-    soup = BeautifulSoup(res.text, "html.parser")
+    print("status:", res.status_code)
+    print("length:", len(res.text))
+    print(res.text)
+    with open("naver_debug.html", "w", encoding="utf-8") as f:
+        f.write(res.text)
 
-    news_items = soup.select("ul.list_news div.news_wrap.api_ani_send")
-    news_list = []
 
-    for item in news_items:
-        title_tag = item.select_one("a.news_tit")
-        img_tag = item.select_one("img")
-
-        title = title_tag.get("title") if title_tag else "제목 없음"
-        link = title_tag.get("href") if title_tag else "#"
-
-        # ✅ 썸네일: data-src → src → 기본 썸네일
-        thumbnail = None
-        if img_tag:
-            thumbnail = img_tag.get("data-src") or img_tag.get("src")
-        if not thumbnail:
-            thumbnail = "https://example.com/default_thumbnail.jpg"
-
-        news_list.append({
-            "title": title,
-            "url": link,
-            "thumbnail": thumbnail
-        })
-
-        if len(news_list) >= 10:
-            break
-
-    return news_list
+def get_naver_news_by_keyword(keyword):
     options = Options()
-    options.headless = True  # 브라우저 UI 없이 백그라운드에서 실행
-    driver = webdriver.Chrome(executable_path="path/to/chromedriver", options=options)
-    
+    options.add_argument("--headless")  # 창 안 띄우기
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("user-agent=Mozilla/5.0")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
     url = f"https://search.naver.com/search.naver?where=news&query={keyword}"
-    driver.get(url)  # 페이지 로드
-    html = driver.page_source  # 페이지 소스 가져오기
-    
-    # 예: get_naver_news_by_category 안에서
-    res = requests.get(url, headers=headers)
-    
-    soup = BeautifulSoup(html, "html.parser")
-    news_items = soup.select("ul.list_news div.news_wrap.api_ani_send")
-    
+    driver.get(url)
+    time.sleep(2)  # 페이지 로딩 기다리기
+
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
+
     news_list = []
-    
-    for item in news_items:
+
+    items = soup.select("ul.list_news > li.bx")
+
+    for item in items:
         title_tag = item.select_one("a.news_tit")
-        
-        # 썸네일 이미지 찾기
-        img_tag = item.select_one("img#img1") or item.select_one("img._LAZY_LOADING")
-        
-        title = title_tag.get("title") if title_tag else "제목 없음"
-        link = title_tag.get("href") if title_tag else "#"
-        
-        # img_tag에서 data-src 속성을 사용해 썸네일 가져오기
-        thumbnail = img_tag.get("data-src") if img_tag and img_tag.has_attr('data-src') else img_tag.get("src") if img_tag else "https://example.com/default_thumbnail.jpg"
-        
-        if thumbnail.startswith("//"):  # 상대경로일 경우 절대경로로 변환
-            thumbnail = "https:" + thumbnail
-        
+        img_tag = item.select_one("a.dsc_thumb img")
+
+        title = title_tag.get("title") if title_tag else None
+        link = title_tag.get("href") if title_tag else None
+        thumbnail = img_tag.get("data-src") or img_tag.get("src") if img_tag else "https://via.placeholder.com/120x80"
+
+        if not title or not link:
+            continue
+
         news_list.append({
             "title": title,
             "url": link,
             "thumbnail": thumbnail
         })
-        
+
         if len(news_list) >= 10:
             break
-    
-    driver.quit()  # WebDriver 종료
-    
+
     return news_list
 
-# 📂 카테고리 기반 뉴스 크롤링 (썸네일 포함)
+
+
 # 📂 카테고리 기반 뉴스 크롤링 (썸네일 포함)
 def get_naver_news_by_category(section_name):
     section_dict = {

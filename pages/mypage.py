@@ -3,14 +3,9 @@ from firebase_admin import db
 from PIL import Image
 import requests
 from io import BytesIO
-<<<<<<< HEAD
 from utils.Database_CRUD import get_history
+from utils.Database_Youtube import get_video_info,get_videos_by_keyword
 from pages.login import show_login_button
-=======
-from utils.Database_CRUD import get_history, delete_history_item
-from utils.Database_Youtube import get_videos_by_keyword, get_video_info
-
->>>>>>> d51e350582cd12c150f8abae494429070dcefbb1
 def main():
     col1, col2 = st.columns([6, 1])
     with col2:
