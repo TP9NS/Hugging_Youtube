@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 import re
 import requests
+from utils.Database_CRUD import save_search, save_watch_history
 
 load_dotenv()  # .env 파일 로드
 
@@ -171,6 +172,7 @@ def main():
     if keyword:
         st.subheader(f"🔎 '{keyword}' 관련 영상 추천")
         videos = get_search_videos(keyword, 10)
+        save_search(st.session_state.user_id, keyword)
     else:
         st.subheader("🔥 인기 TOP 10 영상 추천")
         videos = get_popular_videos(10)
@@ -185,6 +187,7 @@ def main():
                     st.image(video['thumbnail'], use_container_width=True)
                     if st.button(video["title"], key=video["video_id"]):
                         st.session_state.selected_video_id = video["video_id"]
+                        save_watch_history(st.session_state.user_id, video["video_id"])
                         st.switch_page("pages/sel.py")
 
 if __name__ == "__main__":
