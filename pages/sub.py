@@ -3,7 +3,7 @@ from googleapiclient.discovery import build
 from dotenv import load_dotenv
 import os
 from datetime import datetime
-
+from utils.KeywordVisualizer import visualize_keywords_from_text
 
 from utils.CommentsGenAI import process_youtube_comments
 from utils.CommentsGenAI import *
@@ -46,7 +46,7 @@ try:
 
     # 제목, 썸네일, 통계
     st.markdown(f"## 🎥 {title}")
-    st.image(thumbnail, use_container_width=True)
+    st.video(video_url)
     st.markdown(f"👁️ 조회수: {views:,}회")
     st.markdown(f"👍 좋아요: {likes:,}개")
     st.markdown(f"📅 게시일: {published_date}")
@@ -57,6 +57,7 @@ try:
     transcript = fetch_youtube_transcript(video_url)
     summary = summarize_transcript(transcript, summary_strength=summary_strength)
     st.info(summary)
+    visualize_keywords_from_text(transcript, chart_type="pie")
 
     # 🔸 댓글 분석
     st.subheader("💬 댓글 분석")
