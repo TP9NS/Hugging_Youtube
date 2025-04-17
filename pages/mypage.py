@@ -4,7 +4,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 from utils.Database_CRUD import get_history
-
+from pages.login import show_login_button
 def main():
     st.title("👤 마이페이지")
 
@@ -13,6 +13,7 @@ def main():
 
     if not user_id:
         st.warning("로그인이 필요합니다.")
+        show_login_button()
         return
 
     # 📌 카카오 프로필 정보 출력
