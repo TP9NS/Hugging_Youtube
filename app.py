@@ -5,12 +5,13 @@ from dotenv import load_dotenv
 import os
 import re
 import requests
+from datetime import datetime, timedelta
 from utils.Database_CRUD import save_search, save_watch_history
 from utils.Scraping import get_naver_news_by_keyword, get_naver_news_by_category
 
-load_dotenv()  # .env 파일 로드
+# .env 파일 로드
+load_dotenv() 
 
-# YouTube API 설정
 API_KEY = os.getenv("YOUTUBE_API_KEY")
 youtube = build('youtube', 'v3', developerKey=API_KEY)
 
@@ -63,7 +64,8 @@ def get_popular_videos(max_results=6):
         })
     return videos
 
-def get_search_videos(keyword, max_results=10):
+# 검색 영상 가져오기
+def get_search_videos(keyword, max_results=10, order="relevance", start_date=None):
     videos = []
     video_ids_seen = set()
     next_page_token = None
@@ -75,7 +77,8 @@ def get_search_videos(keyword, max_results=10):
             type='video',
             regionCode='KR',
             maxResults=25,
-            pageToken=next_page_token
+            pageToken=next_page_token,
+            order=order
         )
         search_response = search_request.execute()
         video_ids = [item['id']['videoId'] for item in search_response['items']]
@@ -98,6 +101,11 @@ def get_search_videos(keyword, max_results=10):
             seconds = int(match.group(2)) if match and match.group(2) else 0
             duration_seconds = minutes * 60 + seconds
 
+            published_at_str = item['snippet']['publishedAt']
+            published_at = datetime.strptime(published_at_str, "%Y-%m-%dT%H:%M:%SZ")
+            if start_date and published_at < start_date:
+                continue
+
             if duration_seconds > 60:
                 videos.append({
                     'title': item['snippet']['title'],
@@ -115,7 +123,7 @@ def get_search_videos(keyword, max_results=10):
 
     return videos
 
-# 메인 앱
+#메인 앱
 def main():
     st.set_page_config(
         page_title="YouTube 영상 분석",
@@ -125,16 +133,13 @@ def main():
 
     if "code" not in st.session_state:
         query_params = st.query_params
-       
         code = query_params.get("code")
-
         if not code or code == "_":
             show_login_button()
             return
         st.session_state.code = code
     else:
         code = st.session_state.code
-
 
     if "access_token" not in st.session_state:
         access_token = get_kakao_token(code)
@@ -153,38 +158,63 @@ def main():
     else:
         user_info = st.session_state.user_info
 
+    # 1행: 마이페이지
+    with st.container():
+        row1_col1, row1_col2, row1_col3 = st.columns([6, 1, 1])
+        with row1_col3:
+            st.markdown("<div style='text-align: right;'>", unsafe_allow_html=True)
+            if st.button("👤 마이페이지"):
+                st.switch_page("pages/mypage.py")
+            st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<h1 style='text-align: center;'>🎬 YouTube 영상 분석 플랫폼</h1>", unsafe_allow_html=True)
 
-    categories = ["인기급상승", "정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]
-    selected_category = st.radio("카테고리 선택", categories, horizontal=True)
-    
-    # 상단 필터 + 검색창
-    top_left, top_mid, top_right = st.columns([1, 4, 1])
+    # 2행: 키워드 입력창
+    with st.container():
+        row2_col1, row2_col2, row2_col3 = st.columns([1, 6, 1])
+        with row2_col2:
+            keyword = st.text_input("🔍 키워드를 입력하세요", "")
 
-    with top_left:
-        with st.expander("☰ 퀄리티 필터", expanded=False):
-            st.markdown("### 🎯 필터 옵션")
-            sort_by = st.selectbox("정렬 기준", ["관련도", "업로드 날짜", "조회수"] )
-            date_range = st.slider("업로드 기간 (일 기준)", 0, 365, (0, 30))
-
-    with top_mid:
-        keyword = st.text_input("🔍 키워드를 입력하세요", "")
-    with top_right:
-        st.write("")  # 여백 조정용
-        if st.button("👤 마이페이지"):
-            st.switch_page("pages/mypage.py")
     st.markdown("---")
+
+    # 3행: 카테고리 왼쪽, 퀄리티 필터 오른쪽
+    with st.container():
+        row3_col1, row3_col2, row3_col3 = st.columns([6, 0.5, 1.5])
+
+        with row3_col1:
+            categories = ["인기급상승", "정치", "경제", "사회", "생활/문화", "세계", "IT/과학"]
+            selected_category = st.radio("📂 카테고리 선택", categories, horizontal=True)
+
+        with row3_col3:
+            with st.expander("🎯 퀄리티 필터", expanded=False):
+                sort_by = st.selectbox("정렬 기준", ["관련도", "업로드 날짜", "조회수"], key="sort_selectbox")
+                date_options = ["전체", "오늘", "이번 주", "이번 달", "올해"]
+                selected_period = st.selectbox("업로드 기간", date_options, key="date_selectbox")
+
+    order_map = {
+        "관련도": "relevance",
+        "업로드 날짜": "date",
+        "조회수": "viewCount"
+    }
+    order_value = order_map.get(sort_by, "relevance")
+
+    today = datetime.now()
+    period_map = {
+        "오늘": today - timedelta(days=1),
+        "이번 주": today - timedelta(days=today.weekday()),
+        "이번 달": today.replace(day=1),
+        "올해": today.replace(month=1, day=1)
+    }
+    start_date = period_map.get(selected_period) if selected_period != "전체" else None
 
     if keyword:
         st.subheader(f"🔎 '{keyword}' 관련 영상 추천")
-        videos = get_search_videos(keyword, 10)
+        videos = get_search_videos(keyword, 10, order=order_value, start_date=start_date)
         save_search(st.session_state.user_id, keyword)
     else:
         st.subheader("🔥 인기 TOP 10 영상 추천")
         videos = get_popular_videos(10)
 
-    # 영상 리스트 출력
     for i in range(0, len(videos), 5):
         cols = st.columns(5)
         for j in range(5):
@@ -197,7 +227,6 @@ def main():
                         save_watch_history(st.session_state.user_id, video["video_id"])
                         st.switch_page("pages/sel.py")
 
-    # 뉴스 출력: 키워드 기반 or 카테고리 기반
     st.markdown("---")
     if keyword:
         st.subheader(f"📰 '{keyword}' 관련 네이버 뉴스")
