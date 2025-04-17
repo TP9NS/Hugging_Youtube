@@ -170,7 +170,10 @@ def main():
 
     with top_mid:
         keyword = st.text_input("🔍 키워드를 입력하세요", "")
-
+    with top_right:
+        st.write("")  # 여백 조정용
+        if st.button("👤 마이페이지"):
+            st.switch_page("pages/mypage.py")
     st.markdown("---")
 
     if keyword:
