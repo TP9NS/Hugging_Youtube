@@ -20,7 +20,6 @@ def get_video_info(video_id, YOUTUBE_API_KEY):
 
     response = requests.get(url, params=params).json()
     print("요청 ID:", video_id)
-    print("응답:", json.dumps(response, indent=2, ensure_ascii=False))
 
     items = response.get("items", [])
     if not items:
@@ -33,6 +32,7 @@ def get_video_info(video_id, YOUTUBE_API_KEY):
         "title": snippet["title"],
         "channel": snippet["channelTitle"],
         "channel_id": snippet["channelId"],
+        "category_id": snippet.get("categoryId"),
         "thumbnail": snippet["thumbnails"]["high"]["url"],
         "description": snippet.get("description", ""),
         "video_id": video_id
@@ -115,3 +115,19 @@ def get_category_channel_recommendations(video_id, YOUTUBE_API_KEY, max_results=
 
     print(f"✅ 추천 영상 {len(results)}개 가져옴")
     return results
+
+def get_category_mapping(YOUTUBE_API_KEY, region_code="KR"):
+    url = "https://www.googleapis.com/youtube/v3/videoCategories"
+    params = {
+        "part": "snippet",
+        "regionCode": region_code,
+        "key": YOUTUBE_API_KEY
+    }
+
+    response = requests.get(url, params=params).json()
+    category_map = {}
+    for item in response.get("items", []):
+        category_id = item["id"]
+        title = item["snippet"]["title"]
+        category_map[category_id] = title
+    return category_map
