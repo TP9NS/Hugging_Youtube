@@ -125,6 +125,9 @@ def get_search_videos(keyword, max_results=10, order="relevance", start_date=Non
 
 #메인 앱
 def main():
+    order_value = "relevance"
+    start_date = None
+
     st.set_page_config(
         page_title="YouTube 영상 분석",
         page_icon="🎥",
@@ -207,6 +210,10 @@ def main():
                 pure_category = category_mapping[selected_category]
                 st.write(f"✅ 선택된 카테고리: {pure_category}")
 
+                # 카테고리 관련 영상만 검색
+                videos = get_search_videos(pure_category, 10, order=order_value, start_date=start_date)
+                keyword = None  # 카테고리 선택 시 키워드 초기화
+
 
         with row3_col3:
             with st.expander("🎯 퀄리티 필터", expanded=False):
@@ -231,6 +238,7 @@ def main():
     start_date = period_map.get(selected_period) if selected_period != "전체" else None
 
     if keyword:
+        pure_category = None  # 이전 카테고리 제거
         st.subheader(f"🔎 '{keyword}' 관련 영상 추천")
         videos = get_search_videos(keyword, 10, order=order_value, start_date=start_date)
         save_search(st.session_state.user_id, keyword)
@@ -247,7 +255,6 @@ def main():
                 st.switch_page("pages/analysis.py")
 
         videos = get_popular_videos(10)  # 이 라인은 반드시 else 안에 있어야 함
-
 
     for i in range(0, len(videos), 5):
         cols = st.columns(5)
