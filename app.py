@@ -163,7 +163,7 @@ def main():
         row1_col1, row1_col2, row1_col3 = st.columns([6, 1, 1])
         with row1_col3:
             st.markdown("<div style='text-align: right;'>", unsafe_allow_html=True)
-            if st.button("👤 마이페이지"):
+            if st.button("👤 마이페이지", key="mypage_button"):
                 st.switch_page("pages/mypage.py")
             st.markdown("</div>", unsafe_allow_html=True)
 
