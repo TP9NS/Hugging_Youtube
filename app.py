@@ -192,7 +192,7 @@ def main():
             for i, cat in enumerate(categories):
                 if cols[i].button(cat, use_container_width=True):
                     selected_category = cat
-
+                    
             # 선택된 버튼이 있을 경우에만 처리
             if selected_category:
                 category_mapping = {

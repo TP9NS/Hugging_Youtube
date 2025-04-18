@@ -5,61 +5,61 @@ from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
 import requests
-def test_naver_html(keyword):
-    url = f"https://search.naver.com/search.naver?where=news&query={keyword}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
-
-    res = requests.get(url, headers=headers)
-    print("status:", res.status_code)
-    print("length:", len(res.text))
-    print(res.text)
-    with open("naver_debug.html", "w", encoding="utf-8") as f:
-        f.write(res.text)
-
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from bs4 import BeautifulSoup
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 def get_naver_news_by_keyword(keyword):
     options = Options()
-    options.add_argument("--headless")  # 창 안 띄우기
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
     options.add_argument("user-agent=Mozilla/5.0")
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
+    driver = webdriver.Chrome(options=options)
     url = f"https://search.naver.com/search.naver?where=news&query={keyword}"
-    driver.get(url)
-    time.sleep(2)  # 페이지 로딩 기다리기
 
-    soup = BeautifulSoup(driver.page_source, "html.parser")
-    driver.quit()
+    try:
+        driver.get(url)
 
-    news_list = []
+        # 뉴스 영역 전체 로드될 때까지 기다림
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "a[href^='https://']"))
+        )
 
-    items = soup.select("ul.list_news > li.bx")
+        soup = BeautifulSoup(driver.page_source, "html.parser")
 
-    for item in items:
-        title_tag = item.select_one("a.news_tit")
-        img_tag = item.select_one("a.dsc_thumb img")
+        # class명이 난수라서 a태그에서 href만 걸러냄
+        news_blocks = soup.select("div.sds-comps-vertical-layout.sds-comps-full-layout.Ermefm6A3ilpd9Zvt0OZ")
+        
+        news_list = []
+        for block in news_blocks[:10]:  # 최대 10개 블록만 처리
+            # 1. 기사 링크와 제목 추출 (클래스명이 동적이므로 부분 일치 사용)
+            title_link = block.select_one('a[class*="jT1DuARpwIlNAFMacxlu"]')
+            if not title_link:
+                continue  # 필수 요소가 없으면 건너뜀
+                
+            title = title_link.get_text(strip=True)
+            url = title_link['href']
 
-        title = title_tag.get("title") if title_tag else None
-        link = title_tag.get("href") if title_tag else None
-        thumbnail = img_tag.get("data-src") or img_tag.get("src") if img_tag else "https://via.placeholder.com/120x80"
+            # 2. 이미지 URL 추출
+            img_tag = block.select('img[src*="search.pstatic.net"]')
+            img_tag = img_tag[1]
+            img_url = img_tag['src'] if img_tag else None
 
-        if not title or not link:
-            continue
+            news_list.append({
+                "title": title,
+                "url": url,
+                "thumbnail": img_url
+            })
 
-        news_list.append({
-            "title": title,
-            "url": link,
-            "thumbnail": thumbnail
-        })
+        return news_list
 
-        if len(news_list) >= 10:
-            break
-
-    return news_list
+    finally:
+        driver.quit()
 
 
 
