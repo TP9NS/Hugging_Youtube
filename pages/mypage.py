@@ -4,7 +4,8 @@ from PIL import Image
 import requests
 from io import BytesIO
 from utils.Database_CRUD import get_history
-from utils.Database_Youtube import get_video_info,get_videos_by_keyword, get_category_channel_recommendations
+from utils.Database_Youtube import get_video_info, get_videos_by_keyword, get_category_channel_recommendations, get_category_mapping
+from utils.Recommendation_utils import get_recommendations_by_category_name
 from pages.login import show_login_button
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
@@ -16,19 +17,19 @@ import streamlit as st
 import tempfile
 import networkx as nx
 import html
-
+from collections import defaultdict
 
 load_dotenv()
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY)
 
-def build_recommendation_graph_data(search_history, watch_history, get_videos_by_keyword, get_category_channel_recommendations, YOUTUBE_API_KEY):
+def build_recommendation_graph_data(search_history, watch_history, get_videos_by_keyword, get_category_channel_recommendations, get_video_info, YOUTUBE_API_KEY, category_map):
     from collections import defaultdict
     import html
 
-    search_recommend = defaultdict(list)  # keyword → [video dicts]
-    watch_recommend = defaultdict(list)   # watched video → [video dicts]
-    rec_sources = defaultdict(lambda: {"search": set(), "watch": set()})  # video_title → 출처들
+    search_recommend = defaultdict(list)
+    watch_recommend = defaultdict(list)
+    rec_sources = defaultdict(lambda: {"search": set(), "watch": set(), "info": None, "category": None})
 
     seen_keywords = set()
     for record in reversed(search_history):
@@ -38,10 +39,10 @@ def build_recommendation_graph_data(search_history, watch_history, get_videos_by
         seen_keywords.add(kw)
 
         recs = get_videos_by_keyword(kw, YOUTUBE_API_KEY, max_results=5)
-        
         for rec in recs:
             search_recommend[kw].append(rec)
             rec_sources[rec["title"]]["search"].add(kw)
+            rec_sources[rec["title"]]["info"] = rec
 
     used_video_ids = {record["video_id"] for record in watch_history}
     seen_titles = set()
@@ -51,26 +52,27 @@ def build_recommendation_graph_data(search_history, watch_history, get_videos_by
         if not info:
             continue
 
+        category_id = info.get("category_id")
+        category_name = category_map.get(category_id, "알 수 없음")
         watch_title = info["title"]
-        recs = get_category_channel_recommendations(base_video_id, YOUTUBE_API_KEY, max_results=5)
 
+        recs = get_recommendations_by_category_name(category_name, YOUTUBE_API_KEY, max_results=10)
         for rec in recs:
             if rec["video_id"] in used_video_ids or rec["title"] in seen_titles:
                 continue
             watch_recommend[watch_title].append(rec)
             rec_sources[rec["title"]]["watch"].add(watch_title)
+            rec_sources[rec["title"]]["info"] = rec
+            rec_sources[rec["title"]]["category"] = category_name
             seen_titles.add(rec["title"])
 
     return search_recommend, watch_recommend, rec_sources
 
 
-# 📌 함수 정의: 그래프 객체 생성
-
-def create_recommendation_network(search_recommend, watch_recommend):
-    import networkx as nx
+def create_recommendation_network(search_recommend, watch_recommend, rec_sources):
     G = nx.DiGraph()
 
-    # 검색 기반 추천
+    # ✅ 1. 검색 기반 추천
     for keyword, videos in search_recommend.items():
         G.add_node(keyword, label=keyword, color="#FFD93D")
         for video in videos:
@@ -78,15 +80,25 @@ def create_recommendation_network(search_recommend, watch_recommend):
             G.add_node(title, label=title, color="#6BCB77", title=f"🔍 추천 출처: '{keyword}' (검색)")
             G.add_edge(keyword, title, title="검색 기반 추천")
 
-    # 시청 기반 추천
+    # ✅ 2. 시청 기반 추천 (카테고리 단위로 그룹화)
+    category_to_recommendations = defaultdict(set)
+
     for watched, videos in watch_recommend.items():
-        G.add_node(watched, label=watched, color="#4D96FF")
         for video in videos:
             title = video["title"]
-            G.add_node(title, label=title, color="#6BCB77", title=f"👁️ 추천 출처: '{watched}' (시청)")
-            G.add_edge(watched, title, title="시청 기반 추천")
+            category = rec_sources[title].get("category")
+            if category:
+                category_to_recommendations[category].add(title)
 
-    # 고립 노드 처리
+    # ✅ 3. 카테고리 노드 추가 + 해당 추천 영상 연결
+    for category_name, title_set in category_to_recommendations.items():
+        G.add_node(category_name, label=category_name, color="#4D96FF")  # 🔵 카테고리 노드
+
+        for title in list(title_set)[:10]:  # 최대 10개만
+            G.add_node(title, label=title, color="#6BCB77", title=f"👁️ 추천 출처: {category_name} (시청 기반)")
+            G.add_edge(category_name, title, title=f"{category_name} 기반 추천")
+
+    # ✅ 4. 고립 노드 처리
     isolated = [n for n in G.nodes if G.degree(n) == 0]
     for node in isolated:
         G.nodes[node]["color"] = "#BBBBBB"
@@ -95,23 +107,34 @@ def create_recommendation_network(search_recommend, watch_recommend):
 
     return G
 
-def filter_recommendations(rec_sources):
+
+def filter_recommendations_connected_in_graph(rec_sources):
+    """
+    검색, 시청, 카테고리 중 2개 이상의 출처에서 연결된 영상만 필터링
+    (즉, 그래프에서 두 개 이상의 노드와 연결된 추천 영상만 포함)
+    """
     filtered = []
     for title, source in rec_sources.items():
         search_links = source.get("search", set())
         watch_links = source.get("watch", set())
+        category = source.get("category")
         info = source.get("info")
 
         if not info:
             continue
 
-        if (
-            (search_links and watch_links) or
-            (len(search_links) >= 2) or
-            (len(watch_links) >= 2)
-        ):
+        total_links = 0
+        if search_links:
+            total_links += len(search_links)
+        if watch_links:
+            total_links += len(watch_links)
+
+        # 2개 이상의 출처에서 연결된 경우만 필터링
+        if total_links >= 2:
             filtered.append(info)
+
     return filtered
+
 
 
 def main():
@@ -221,13 +244,18 @@ def main():
     search_history = get_history(user_id, "search_history")
     watch_history = get_history(user_id, "watch_history")
 
+    # ✅ 카테고리 ID ↔ 이름 매핑 가져오기
+    category_map = get_category_mapping(YOUTUBE_API_KEY)
+
     # ✅ 추천 데이터 구성
     search_recommend, watch_recommend, rec_sources = build_recommendation_graph_data(
         search_history,
         watch_history,
         get_videos_by_keyword,
         get_category_channel_recommendations,
-        YOUTUBE_API_KEY
+        get_video_info,
+        YOUTUBE_API_KEY,
+        category_map  # ✅ 새롭게 전달
     )
 
     # ✅ 3. 추천이 있는지 여부 체크
@@ -241,7 +269,7 @@ def main():
         with col1:
             st.subheader("📌 추천 영상 네트워크 그래프")
 
-            G = create_recommendation_network(search_recommend, watch_recommend)
+            G = create_recommendation_network(search_recommend, watch_recommend, rec_sources)
 
             if G.number_of_edges() == 0:
                 st.info("연결된 추천 영상이 없어 그래프를 생성하지 않았습니다.")
@@ -267,47 +295,10 @@ def main():
             </div>
             """, unsafe_allow_html=True)
 
-    # ✅ 추천 영상 제목 기준으로 검색/시청 기반 추천 여부 기록
-    rec_sources = {}
-
-    # 🔍 1. 검색 기반 추천 정보 수집
-    for keyword, recs in search_recommend.items():
-        for rec in recs:
-            if not isinstance(rec, dict):
-                continue
-            title = rec.get("title")
-            if not isinstance(title, str):
-                continue
-
-            if title not in rec_sources:
-                rec_sources[title] = {"search": set(), "watch": set(), "info": rec}
-            else:
-                if not rec_sources[title].get("info"):
-                    rec_sources[title]["info"] = rec
-            rec_sources[title]["search"].add(keyword)
-
-    # 👁️ 2. 시청 기반 추천 정보 수집
-    for watched_title, recs in watch_recommend.items():
-        for rec in recs:
-            if not isinstance(rec, dict):
-                continue
-            title = rec.get("title")
-            if not isinstance(title, str):
-                continue
-
-            if title not in rec_sources:
-                rec_sources[title] = {"search": set(), "watch": set(), "info": rec}
-            else:
-                if not rec_sources[title].get("info"):
-                    rec_sources[title]["info"] = rec
-            rec_sources[title]["watch"].add(watched_title)
-
-
-
     st.markdown("---")
     st.subheader("📽️ 추천 영상 목록 (복수 연결 기반)")
 
-    filtered_recommendations = filter_recommendations(rec_sources)
+    filtered_recommendations = filter_recommendations_connected_in_graph(rec_sources)
 
     if not filtered_recommendations:
         st.info("추천된 영상이 없습니다.")
@@ -322,7 +313,5 @@ def main():
                     st.markdown(f"채널명: *{video['channel']}*")
                     st.markdown(f"[▶ 영상 보기](https://youtube.com/watch?v={video['video_id']})")
             st.markdown("---")
-
-
 
 main()
