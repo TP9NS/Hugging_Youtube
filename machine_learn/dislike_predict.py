@@ -1,18 +1,18 @@
 import re
 import os
 import pandas as pd
+import numpy as np
 import joblib
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
-
 
 load_dotenv()
 API_KEY = os.getenv("YOUTUBE_API_KEY")
 youtube = build("youtube", "v3", developerKey=API_KEY)
 
 # 모델과 feature column 불러오기
-model = joblib.load("machine_learn/dislike_predictor_model.pkl")
-feature_columns = joblib.load("machine_learn/feature_columns.pkl")
+model = joblib.load("machine_learn/dislike_predictor_rf_with_view.pkl")
+feature_columns = joblib.load("machine_learn/feature_columns_rf_with_view.pkl")
 
 # 유튜브 링크에서 video_id 추출
 def extract_video_id(url: str) -> str:
@@ -36,6 +36,7 @@ def get_video_features(video_id: str):
 
     return {
         "categoryId": category_id,
+        "view_count": int(stats.get("viewCount", 0)),
         "likes": int(stats.get("likeCount", 0)),
         "comment_count": int(stats.get("commentCount", 0))
     }
@@ -44,30 +45,39 @@ def get_video_features(video_id: str):
 def predict_dislikes_from_link(video_url: str) -> str:
     video_id = extract_video_id(video_url)
     if not video_id:
-        return "유효하지 않은 YouTube 링크입니다."
+        return "❌ 유효하지 않은 YouTube 링크입니다."
 
     features = get_video_features(video_id)
     if not features:
-        return "영상 정보를 가져오지 못했습니다."
+        return "❌ 영상 정보를 가져오지 못했습니다."
 
     category = features["categoryId"]
+    views = features["view_count"]
     likes = features["likes"]
     comment_count = features["comment_count"]
 
+    # ✅ 로그 변환 및 파생 피처
+    view_log = np.log1p(views)
+    likes_log = np.log1p(likes)
+    comment_log = np.log1p(comment_count)
+    like_comment_ratio = likes / (comment_count + 1)
+
     # 입력값 구성
     input_dict = {
-        "likes": [likes],
-        "comment_count": [comment_count]
+        "view_log": [view_log],
+        "likes_log": [likes_log],
+        "comment_log": [comment_log],
+        "like_comment_ratio": [like_comment_ratio]
     }
 
-    # 카테고리 원핫 인코딩 반영
+    # ✅ 카테고리 원핫 인코딩
     for col in feature_columns:
         if col.startswith("categoryId_"):
             input_dict[col] = [1 if col == f"categoryId_{category}" else 0]
 
     input_df = pd.DataFrame(input_dict)
 
-    # 누락된 컬럼은 0으로 채움 (모델과 컬럼 수 맞추기)
+    # 누락된 컬럼은 0으로 채움
     for col in feature_columns:
         if col not in input_df.columns:
             input_df[col] = 0
@@ -75,4 +85,4 @@ def predict_dislikes_from_link(video_url: str) -> str:
 
     # 예측
     prediction = model.predict(input_df)[0]
-    return f"예측된 싫어요 수: {int(prediction):,}개"
+    return f"📊 예측된 싫어요 수: {int(prediction):,}개"
