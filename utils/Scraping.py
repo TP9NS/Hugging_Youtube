@@ -46,10 +46,14 @@ def get_naver_news_by_keyword(keyword):
             url = title_link['href']
 
             # 2. 이미지 URL 추출
-            img_tag = block.select('img[src*="search.pstatic.net"]')
-            img_tag = img_tag[1]
-            img_url = img_tag['src'] if img_tag else None
-
+            img_tags = block.select('img[src*="search.pstatic.net"]')
+            if len(img_tags) > 1:
+                img_url = img_tags[1]['src']
+            elif len(img_tags) > 0:
+                img_url = img_tags[0]['src']
+            else:
+                img_url = "https://example.com/default_thumbnail.jpg"  # 기본 이미지
+            
             news_list.append({
                 "title": title,
                 "url": url,
@@ -60,8 +64,6 @@ def get_naver_news_by_keyword(keyword):
 
     finally:
         driver.quit()
-
-
 
 # 📂 카테고리 기반 뉴스 크롤링 (썸네일 포함)
 def get_naver_news_by_category(section_name):

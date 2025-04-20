@@ -1,5 +1,6 @@
 .env
 *.json
+.csv
 
 kaggle_dataset_KR/dislike_predictor_model.pkl
 kaggle_dataset_KR/KR_youtube_trending_data.csv

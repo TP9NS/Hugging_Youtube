@@ -81,7 +81,12 @@ def get_search_videos(keyword, max_results=10, order="relevance", start_date=Non
             order=order
         )
         search_response = search_request.execute()
-        video_ids = [item['id']['videoId'] for item in search_response['items']]
+        #공식 채널, 재생목록이 상단에 떠서 검색 오류 나는 item['id'] 안에 'videoId'가 있는 경우만 필터링되도록 수정
+        video_ids = [
+            item['id']['videoId']
+            for item in search_response['items']
+            if item['id'].get('kind') == 'youtube#video' and 'videoId' in item['id']
+        ]
         next_page_token = search_response.get("nextPageToken")
 
         details_request = youtube.videos().list(

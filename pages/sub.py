@@ -8,6 +8,7 @@ from utils.KeywordVisualizer import visualize_keywords_from_text
 from utils.CommentsGenAI import process_youtube_comments
 from utils.CommentsGenAI import *
 from utils.TranscriptSummarize import fetch_youtube_transcript, summarize_transcript
+from utils.like_ratio import get_average_like_ratio, calculate_like_ratio
 
 import plotly.express as px
 
@@ -53,6 +54,18 @@ try:
     st.markdown(f"👍 좋아요: {likes:,}개")
     st.markdown(f"📅 게시일: {published_date}")
     st.markdown(f"🔗 [YouTube에서 보기]({video_url})", unsafe_allow_html=True)
+
+    #조회수 대비 좋아요 수 분석
+    avg_like_ratio = get_average_like_ratio()
+    video_like_ratio = calculate_like_ratio(likes, views)  # ✅ 수정된 부분
+
+    if video_like_ratio is not None:
+        if video_like_ratio > 0:
+            st.markdown(f"💡 이 영상은 다른 영상들에 비해 **{video_like_ratio:.2f}%** 더 많은 좋아요를 받았습니다.")
+        else:
+            st.markdown(f"💡 이 영상은 다른 영상들에 비해 **{-video_like_ratio:.2f}%** 더 적은 좋아요를 받았습니다.")
+    else:
+        st.warning("⚠️ 좋아요 비율 계산에 실패했습니다.")
 
     # 1행 - 영상 요약
     st.subheader("📝 영상 요약")
