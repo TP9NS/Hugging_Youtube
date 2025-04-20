@@ -40,6 +40,9 @@ def build_recommendation_graph_data(search_history, watch_history, get_videos_by
 
         recs = get_videos_by_keyword(kw, YOUTUBE_API_KEY, max_results=5)
         for rec in recs:
+            title = rec.get("title", "").lower()
+            if "치어리더" in title:
+                continue  # ✅ '치어리더' 포함된 제목은 제외
             search_recommend[kw].append(rec)
             rec_sources[rec["title"]]["search"].add(kw)
             rec_sources[rec["title"]]["info"] = rec
@@ -58,6 +61,9 @@ def build_recommendation_graph_data(search_history, watch_history, get_videos_by
 
         recs = get_recommendations_by_category_name(category_name, YOUTUBE_API_KEY, max_results=10)
         for rec in recs:
+            title = rec.get("title", "").lower()
+            if "치어리더" in title:
+                continue  # ✅ '치어리더' 포함된 제목은 제외
             if rec["video_id"] in used_video_ids or rec["title"] in seen_titles:
                 continue
             watch_recommend[watch_title].append(rec)
@@ -214,14 +220,21 @@ def main():
     st.subheader("📺 시청 기록")
     watch_history = get_history(user_id, "watch_history")
 
+    # ✅ 시청기록 초기 상태 설정
+    if "show_full_watch_history" not in st.session_state:
+        st.session_state["show_full_watch_history"] = False
+
+    # ✅ 몇 개까지 보여줄지 결정
+    display_limit = len(watch_history) if st.session_state["show_full_watch_history"] else 5
+
     if watch_history:
-        for i, record in enumerate(reversed(watch_history), 1):
+        for i, record in enumerate(reversed(watch_history[:display_limit]), 1):
             video_id = record["video_id"]
             video_info = get_video_info(video_id, YOUTUBE_API_KEY)
 
             if video_info:
                 with st.container():
-                    col1, col2, col3 = st.columns([1, 5, 1])
+                    col1, col2, col3 = st.columns([2, 6, 1])
                     with col1:
                         st.image(video_info["thumbnail"], width=220)
                     with col2:
@@ -234,9 +247,15 @@ def main():
                             from utils.Database_CRUD import delete_history_item
                             delete_history_item(user_id, "watch_history", record["key"])
                             st.rerun()
+
+        # ✅ '더보기' 버튼을 시청기록 리스트의 아래쪽 우측 정렬로 배치
+        if not st.session_state["show_full_watch_history"] and len(watch_history) > 5:
+            st.markdown("""<div style="text-align: right; padding-top: 10px;">""", unsafe_allow_html=True)
+            if st.button("📂 더보기", key="show_more_watch"):
+                st.session_state["show_full_watch_history"] = True
+            st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("시청 기록이 없습니다.")
-
 
     st.markdown("---")
 
