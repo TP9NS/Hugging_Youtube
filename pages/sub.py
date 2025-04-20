@@ -9,7 +9,7 @@ from utils.CommentsGenAI import process_youtube_comments
 from utils.CommentsGenAI import *
 from utils.TranscriptSummarize import fetch_youtube_transcript, summarize_transcript
 from utils.like_ratio import get_average_like_ratio, calculate_like_ratio
-
+from machine_learn.dislike_predict import predict_dislikes_from_link
 import plotly.express as px
 
 load_dotenv()
@@ -52,6 +52,7 @@ try:
     st.video(video_url)
     st.markdown(f"👁️ 조회수: {views:,}회")
     st.markdown(f"👍 좋아요: {likes:,}개")
+    st.markdown(f"👎 머신러닝 예측 싫어요 : {predict_dislikes_from_link(video_url)}개")
     st.markdown(f"📅 게시일: {published_date}")
     st.markdown(f"🔗 [YouTube에서 보기]({video_url})", unsafe_allow_html=True)
 

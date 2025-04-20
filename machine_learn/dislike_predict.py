@@ -43,6 +43,7 @@ def get_video_features(video_id: str):
 
 # 전체 예측 함수
 def predict_dislikes_from_link(video_url: str) -> str:
+    print('머신러닝 함수 호출')
     video_id = extract_video_id(video_url)
     if not video_id:
         return "❌ 유효하지 않은 YouTube 링크입니다."
@@ -85,4 +86,4 @@ def predict_dislikes_from_link(video_url: str) -> str:
 
     # 예측
     prediction = model.predict(input_df)[0]
-    return f"📊 예측된 싫어요 수: {int(prediction):,}개"
+    return int(prediction)
