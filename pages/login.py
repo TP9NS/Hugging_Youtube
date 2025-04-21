@@ -17,7 +17,7 @@ def show_login_button():
     st.markdown(
         """
         <div style="text-align: center; padding: 2rem 1rem;">
-            <h1>🎥 YouTube 감정 분석 플랫폼</h1>
+            <h1>🎥 YouTube 영상 분석 플랫폼</h1>
             <p style="font-size: 1.1rem; color: #444;">
                 AI로 유튜브 댓글을 분석하고, 영상 반응을 요약해보세요!<br>
                 <b>검색 기록</b>과 <b>시청 기록</b>을 저장하고 마이페이지에서 확인할 수 있습니다.
