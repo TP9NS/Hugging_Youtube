@@ -53,6 +53,41 @@ try:
     st.markdown(f"👁️ 조회수: {views:,}회")
     st.markdown(f"👍 좋아요: {likes:,}개")
     st.markdown(f"👎 머신러닝 예측 싫어요 : {predict_dislikes_from_link(video_url)}개")
+    with st.expander("📊 예측 결과 더보기 (그래프 포함)"):
+        st.markdown("### 예측 피처 기반 분석")
+
+        # 피처별 값 시각화 (예: 좋아요, 조회수, 댓글수)
+        fig = px.bar(
+            x=["조회수", "좋아요", "댓글 수", "예측 싫어요 수"],
+            y=[views, likes, video["statistics"].get("commentCount", 0), predict_dislikes_from_link(video_url)],
+            labels={"x": "항목", "y": "수치"},
+            title="예측에 사용된 주요 값 비교"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        # 🎄 랜덤포레스트 트리 중 하나 시각화
+        from sklearn.tree import plot_tree
+        import matplotlib.pyplot as plt
+        import joblib
+
+        st.markdown("### 🔍 랜덤 포레스트 내부 트리 예시")
+
+        try:
+            model = joblib.load("machine_learn/dislike_predictor_rf_with_view.pkl")
+            estimator = model.estimators_[0]
+
+            fig, ax = plt.subplots(figsize=(20, 10))
+            plot_tree(
+                estimator,
+                feature_names=joblib.load("machine_learn/feature_columns_rf_with_view.pkl"),
+                filled=True,
+                max_depth=5,
+                fontsize=10,
+                ax=ax
+            )
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f"❌ 트리 시각화 실패: {e}")
     st.markdown(f"📅 게시일: {published_date}")
     st.markdown(f"🔗 [YouTube에서 보기]({video_url})", unsafe_allow_html=True)
 
