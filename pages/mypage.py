@@ -253,6 +253,7 @@ def main():
             st.markdown("""<div style="text-align: right; padding-top: 10px;">""", unsafe_allow_html=True)
             if st.button("📂 더보기", key="show_more_watch"):
                 st.session_state["show_full_watch_history"] = True
+                st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("시청 기록이 없습니다.")
