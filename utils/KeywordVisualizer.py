@@ -11,7 +11,7 @@ rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 
 # 불용어 제거 - 나중에 csv 파일로(stopwords.csv) 만들어서 불러오면 좋을 듯
-STOPWORDS = {"좋아", "진짜", "좀", "약간", "되게", "정말", "그냥", "거", "때문", "것", "우리", "그것", "생각", "언니", "오빠", "형", "야"}
+STOPWORDS = {"좋아", "진짜", "좀", "약간", "되게", "정말", "그냥", "거", "때문", "것", "우리", "그것", "생각", "언니", "오빠", "형", "야", "있는"}
 
 # 자막 텍스트에서 명사 추출 및 빈도수 계산 (soynlp 기반)
 def extract_top_nouns(text: str, top_n: int = 10) -> Counter:
