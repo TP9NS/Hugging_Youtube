@@ -125,17 +125,3 @@ def summarize_transcript(
     cleaned_summary = postprocess_summary(" ".join(summaries))
     limited_summary = limit_summary_sentences(cleaned_summary, max_sentences=max_sentences)
     return limited_summary
-
-# if __name__ == "__main__":
-#     test_video_url = 'https://www.youtube.com/watch?v=MHyaDHWkA2Y'
-#     try:
-#         transcript = fetch_youtube_transcript(test_video_url)
-#         print("Original Transcript Preview:")
-#         print(transcript[:500], "...\n")
-
-#         summary = summarize_transcript(transcript, summary_strength="짧게")
-#         print("\nSummarized Transcript:")
-#         print(summary)
-
-#     except ValueError as e:
-#         print("Error:", e)
